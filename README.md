@@ -61,6 +61,4 @@ job-application-tracker/
 
 ## Demo Video
 
-<!-- Required by the instructions: a 3 to 7-minute recorded video of the project running (client, server, database), uploaded to GitHub. Put the video's file name here. -->
-
-_(Write your video file name here)_
+[Project_Video_jobTracker (1).mp4](Project_Video_jobTracker%20(1).mp4)
