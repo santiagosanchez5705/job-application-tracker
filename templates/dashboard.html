@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p class="subtitle">An overview of your job search.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('application_add') }}" class="btn btn-primary">+ New Application</a>
+    </div>
+</div>
+
+{% if db_error %}
+    <div class="card error-card">
+        {% if connection_problem %}
+            <h2>Could not connect to the database</h2>
+            <p>Make sure MySQL is running, the <code>job_tracker</code> database was created with
+                <code>schema.sql</code>, and your password is set in <code>config.py</code>.</p>
+        {% else %}
+            <h2>A database error occurred</h2>
+            <p>The last action could not be completed. Please go back and try again.</p>
+        {% endif %}
+        <p class="muted small">Details: {{ db_error }}</p>
+    </div>
+{% else %}
+
+<div class="stat-grid">
+    <a href="{{ url_for('companies') }}" class="stat-card">
+        <span class="stat-label">Companies</span>
+        <span class="stat-value">{{ stats.counts.companies }}</span>
+    </a>
+    <a href="{{ url_for('jobs') }}" class="stat-card">
+        <span class="stat-label">Jobs</span>
+        <span class="stat-value">{{ stats.counts.jobs }}</span>
+    </a>
+    <a href="{{ url_for('applications') }}" class="stat-card">
+        <span class="stat-label">Applications</span>
+        <span class="stat-value">{{ stats.counts.applications }}</span>
+    </a>
+    <a href="{{ url_for('contacts') }}" class="stat-card">
+        <span class="stat-label">Contacts</span>
+        <span class="stat-value">{{ stats.counts.contacts }}</span>
+    </a>
+</div>
+
+<div class="stat-grid stat-grid-3">
+    <div class="stat-card stat-gold">
+        <span class="stat-label">Active Applications</span>
+        <span class="stat-value">{{ stats.active }}</span>
+    </div>
+    <div class="stat-card stat-gold">
+        <span class="stat-label">Response Rate</span>
+        <span class="stat-value">{{ stats.response_rate }}%</span>
+    </div>
+    <div class="stat-card stat-gold">
+        <span class="stat-label">Offers</span>
+        <span class="stat-value">{{ stats.offers }}</span>
+    </div>
+</div>
+
+<div class="two-col">
+    <section class="card">
+        <h2>Applications by Status</h2>
+        {% set total = stats.counts.applications or 1 %}
+        <ul class="status-bars">
+            {% for status in statuses %}
+                {% set count = stats.by_status.get(status, 0) %}
+                <li>
+                    <a href="{{ url_for('applications', status=status) }}" class="status-row">
+                        <span class="badge status-{{ status|lower }}">{{ status }}</span>
+                        <span class="bar"><span class="bar-fill status-fill-{{ status|lower }}" style="width: {{ (count / total * 100)|round(0) }}%"></span></span>
+                        <span class="status-count">{{ count }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Recent Applications</h2>
+            <a href="{{ url_for('applications') }}" class="link">View all &rarr;</a>
+        </div>
+        {% if stats.recent %}
+            <ul class="recent-list">
+                {% for app in stats.recent %}
+                    <li>
+                        <a href="{{ url_for('application_detail', application_id=app.application_id) }}">
+                            <strong>{{ app.job_title }}</strong>
+                            <span class="muted">{{ app.company_name }} &middot; {{ app.application_date.strftime('%b %d, %Y') }}</span>
+                        </a>
+                        <span class="badge status-{{ app.status|lower }}">{{ app.status }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="empty">No applications yet. <a href="{{ url_for('application_add') }}">Add your first one</a>.</p>
+        {% endif %}
+    </section>
+</div>
+
+<section class="card cta-card">
+    <div>
+        <h2>Find your best-fit jobs</h2>
+        <p class="muted">Enter your skills and see which saved jobs match you best.</p>
+    </div>
+    <a href="{{ url_for('job_match') }}" class="btn btn-gold">Try Job Match</a>
+</section>
+{% endif %}
+{% endblock %}

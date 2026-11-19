@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Applications{% endblock %}
+
+{% block content %}
+{% if mode == 'list' %}
+    <div class="page-header">
+        <div>
+            <h1>Applications</h1>
+            <p class="subtitle">Every application you've sent and where it stands.</p>
+        </div>
+        <a href="{{ url_for('application_add') }}" class="btn btn-primary">+ Add Application</a>
+    </div>
+
+    <div class="filter-bar">
+        <a href="{{ url_for('applications') }}" class="filter {{ 'active' if not current_status }}">All</a>
+        {% for s in statuses %}
+            <a href="{{ url_for('applications', status=s) }}" class="filter {{ 'active' if current_status == s }}">{{ s }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="card table-card">
+        {% if applications %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Job</th>
+                    <th>Company</th>
+                    <th>Applied</th>
+                    <th>Status</th>
+                    <th>Resume</th>
+                    <th>Cover Letter</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in applications %}
+                <tr>
+                    <td><a href="{{ url_for('application_detail', application_id=a.application_id) }}" class="row-title">{{ a.job_title or '—' }}</a></td>
+                    <td>{{ a.company_name or '—' }}</td>
+                    <td class="nowrap">{{ a.application_date.strftime('%b %d, %Y') }}</td>
+                    <td><span class="badge status-{{ a.status|lower }}">{{ a.status }}</span></td>
+                    <td>{{ a.resume_version or '—' }}</td>
+                    <td>{{ 'Yes' if a.cover_letter_sent else 'No' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('application_detail', application_id=a.application_id) }}" class="btn btn-sm btn-light">View</a>
+                        <a href="{{ url_for('application_edit', application_id=a.application_id) }}" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="{{ url_for('application_delete', application_id=a.application_id) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="empty">No applications{{ ' with status ' ~ current_status if current_status }}. <a href="{{ url_for('application_add') }}">Add one</a>.</p>
+        {% endif %}
+    </div>
+
+{% elif mode == 'detail' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('applications') }}" class="back-link">&larr; All applications</a>
+            <h1>{{ application.job_title or 'Application' }}</h1>
+            <p class="subtitle">
+                {% if application.company_id %}<a href="{{ url_for('company_detail', company_id=application.company_id) }}">{{ application.company_name }}</a> &middot; {% endif %}
+                <span class="badge status-{{ application.status|lower }}">{{ application.status }}</span>
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('application_edit', application_id=application.application_id) }}" class="btn btn-outline">Edit</a>
+            <a href="{{ url_for('application_delete', application_id=application.application_id) }}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <section class="card">
+            <h2>Application</h2>
+            <dl class="details details-1">
+                <div><dt>Job</dt><dd>{% if application.job_id %}<a href="{{ url_for('job_detail', job_id=application.job_id) }}">{{ application.job_title }}</a>{% else %}—{% endif %}</dd></div>
+                <div><dt>Application Date</dt><dd>{{ application.application_date.strftime('%B %d, %Y') }}</dd></div>
+                <div><dt>Resume Version</dt><dd>{{ application.resume_version or '—' }}</dd></div>
+                <div><dt>Cover Letter Sent</dt><dd>{{ 'Yes' if application.cover_letter_sent else 'No' }}</dd></div>
+            </dl>
+        </section>
+        <section class="card">
+            <h2>Interview Details</h2>
+            {% set iv = application.interview_data %}
+            {% if iv %}
+                <dl class="details details-1">
+                    <div><dt>Interview Date</dt><dd>{{ iv.get('interview_date', '—') }}</dd></div>
+                    <div><dt>Type</dt><dd>{{ iv.get('interview_type', '—') }}</dd></div>
+                    <div><dt>Interviewer</dt><dd>{{ iv.get('interviewer', '—') }}</dd></div>
+                    <div><dt>Notes</dt><dd>{{ iv.get('notes', '—') }}</dd></div>
+                </dl>
+            {% else %}
+                <p class="empty">No interview scheduled yet.</p>
+            {% endif %}
+        </section>
+    </div>
+
+{% elif mode == 'form' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('applications') }}" class="back-link">&larr; All applications</a>
+            <h1>{{ 'Edit Application' if editing else 'Add Application' }}</h1>
+        </div>
+    </div>
+
+    {% if not jobs %}
+        <div class="flash flash-error">You need to <a href="{{ url_for('job_add') }}">add a job</a> before tracking applications.</div>
+    {% endif %}
+
+    <form method="post" class="card form" novalidate>
+        <h2 class="form-section">Application</h2>
+        <div class="form-grid">
+            <label class="full">Job <span class="req">*</span>
+                <select name="job_id" required>
+                    <option value="">— Select a job —</option>
+                    {% for j in jobs %}
+                        <option value="{{ j.job_id }}" {{ 'selected' if item.get('job_id')|string == j.job_id|string }}>{{ j.job_title }} — {{ j.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Application Date <span class="req">*</span>
+                <input type="date" name="application_date" required value="{{ item.get('application_date', '') }}">
+            </label>
+            <label>Status <span class="req">*</span>
+                <select name="status" required>
+                    {% for s in statuses %}
+                        <option value="{{ s }}" {{ 'selected' if item.get('status') == s }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Resume Version
+                <input type="text" name="resume_version" maxlength="50" placeholder="e.g. v2.1-software" value="{{ item.get('resume_version', '') }}">
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="cover_letter_sent" {{ 'checked' if item.get('cover_letter_sent') == 'on' }}>
+                Cover letter sent
+            </label>
+        </div>
+
+        <h2 class="form-section">Interview Details <span class="muted small">(optional, stored as JSON)</span></h2>
+        <div class="form-grid">
+            <label>Interview Date
+                <input type="date" name="interview_date" value="{{ item.get('interview_date', '') }}">
+            </label>
+            <label>Interview Type
+                <select name="interview_type">
+                    <option value="">— Select —</option>
+                    {% for t in interview_types %}
+                        <option value="{{ t }}" {{ 'selected' if item.get('interview_type') == t }}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="full">Interviewer
+                <input type="text" name="interviewer" value="{{ item.get('interviewer', '') }}">
+            </label>
+            <label class="full">Interview Notes
+                <textarea name="interview_notes" rows="3">{{ item.get('interview_notes', '') }}</textarea>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('application_detail', application_id=record_id) if editing else url_for('applications') }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing else 'Add Application' }}</button>
+        </div>
+    </form>
+{% elif mode == 'delete' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('application_detail', application_id=application.application_id) }}" class="back-link">&larr; Back to application</a>
+            <h1>Delete Application</h1>
+        </div>
+    </div>
+
+    <div class="card confirm-card">
+        <h2>Are you sure you want to delete your application for &ldquo;{{ application.job_title }}&rdquo;{% if application.company_name %} at {{ application.company_name }}{% endif %}?</h2>
+        <p class="confirm-warning">Applied {{ application.application_date.strftime('%B %d, %Y') }} &middot; Status: {{ application.status }}. This cannot be undone.</p>
+        <form method="post" class="confirm-actions">
+            <a href="{{ url_for('application_detail', application_id=application.application_id) }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-danger-solid">Yes, delete application</button>
+        </form>
+    </div>
+{% endif %}
+{% endblock %}

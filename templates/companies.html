@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Companies{% endblock %}
+
+{% block content %}
+{% if mode == 'list' %}
+    <div class="page-header">
+        <div>
+            <h1>Companies</h1>
+            <p class="subtitle">Organizations you are interested in or have applied to.</p>
+        </div>
+        <a href="{{ url_for('company_add') }}" class="btn btn-primary">+ Add Company</a>
+    </div>
+
+    <div class="card table-card">
+        {% if companies %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Industry</th>
+                    <th>Location</th>
+                    <th>Jobs</th>
+                    <th>Contacts</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in companies %}
+                <tr>
+                    <td><a href="{{ url_for('company_detail', company_id=c.company_id) }}" class="row-title">{{ c.company_name }}</a></td>
+                    <td>{{ c.industry or '—' }}</td>
+                    <td>{{ [c.city, c.state]|select|join(', ') or '—' }}</td>
+                    <td>{{ c.job_count }}</td>
+                    <td>{{ c.contact_count }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('company_detail', company_id=c.company_id) }}" class="btn btn-sm btn-light">View</a>
+                        <a href="{{ url_for('company_edit', company_id=c.company_id) }}" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="{{ url_for('company_delete', company_id=c.company_id) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="empty">No companies yet. <a href="{{ url_for('company_add') }}">Add one</a>.</p>
+        {% endif %}
+    </div>
+
+{% elif mode == 'detail' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('companies') }}" class="back-link">&larr; All companies</a>
+            <h1>{{ company.company_name }}</h1>
+            <p class="subtitle">{{ company.industry or 'Industry not set' }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('company_edit', company_id=company.company_id) }}" class="btn btn-outline">Edit</a>
+            <a href="{{ url_for('company_delete', company_id=company.company_id) }}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <dl class="details">
+            <div><dt>Website</dt><dd>{% if company.website %}<a href="{{ company.website }}" target="_blank" rel="noopener">{{ company.website }}</a>{% else %}—{% endif %}</dd></div>
+            <div><dt>City</dt><dd>{{ company.city or '—' }}</dd></div>
+            <div><dt>State</dt><dd>{{ company.state or '—' }}</dd></div>
+            <div class="full"><dt>Notes</dt><dd>{{ company.notes or '—' }}</dd></div>
+        </dl>
+    </div>
+
+    <div class="two-col">
+        <section class="card">
+            <div class="card-header">
+                <h2>Jobs ({{ jobs|length }})</h2>
+                <a href="{{ url_for('job_add', company_id=company.company_id) }}" class="link">+ Add job</a>
+            </div>
+            {% if jobs %}
+                <ul class="recent-list">
+                    {% for j in jobs %}
+                    <li>
+                        <a href="{{ url_for('job_detail', job_id=j.job_id) }}"><strong>{{ j.job_title }}</strong>
+                            <span class="muted">{{ j.job_type or '' }}</span></a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}<p class="empty">No jobs saved for this company.</p>{% endif %}
+        </section>
+        <section class="card">
+            <div class="card-header">
+                <h2>Contacts ({{ contacts|length }})</h2>
+                <a href="{{ url_for('contact_add', company_id=company.company_id) }}" class="link">+ Add contact</a>
+            </div>
+            {% if contacts %}
+                <ul class="recent-list">
+                    {% for ct in contacts %}
+                    <li>
+                        <a href="{{ url_for('contact_detail', contact_id=ct.contact_id) }}"><strong>{{ ct.contact_name }}</strong>
+                            <span class="muted">{{ ct.title or '' }}</span></a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}<p class="empty">No contacts for this company.</p>{% endif %}
+        </section>
+    </div>
+
+{% elif mode == 'form' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('companies') }}" class="back-link">&larr; All companies</a>
+            <h1>{{ 'Edit Company' if editing else 'Add Company' }}</h1>
+        </div>
+    </div>
+
+    <form method="post" class="card form" novalidate>
+        <div class="form-grid">
+            <label class="full">Company Name <span class="req">*</span>
+                <input type="text" name="company_name" maxlength="100" required value="{{ item.get('company_name', '') }}">
+            </label>
+            <label>Industry
+                <input type="text" name="industry" maxlength="50" value="{{ item.get('industry', '') }}">
+            </label>
+            <label>Website
+                <input type="url" name="website" maxlength="200" placeholder="https://" value="{{ item.get('website', '') }}">
+            </label>
+            <label>City
+                <input type="text" name="city" maxlength="50" value="{{ item.get('city', '') }}">
+            </label>
+            <label>State
+                <input type="text" name="state" maxlength="50" value="{{ item.get('state', '') }}">
+            </label>
+            <label class="full">Notes
+                <textarea name="notes" rows="4">{{ item.get('notes', '') }}</textarea>
+            </label>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('company_detail', company_id=record_id) if editing else url_for('companies') }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing else 'Add Company' }}</button>
+        </div>
+    </form>
+{% elif mode == 'delete' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('company_detail', company_id=company.company_id) }}" class="back-link">&larr; Back to company</a>
+            <h1>Delete Company</h1>
+        </div>
+    </div>
+
+    <div class="card confirm-card">
+        <h2>Are you sure you want to delete &ldquo;{{ company.company_name }}&rdquo;?</h2>
+        <p class="confirm-warning">This will also permanently delete its {{ jobs|length }} job(s), all applications for those jobs, and its {{ contacts|length }} contact(s). This cannot be undone.</p>
+        <form method="post" class="confirm-actions">
+            <a href="{{ url_for('company_detail', company_id=company.company_id) }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-danger-solid">Yes, delete company</button>
+        </form>
+    </div>
+{% endif %}
+{% endblock %}

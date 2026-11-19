@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Contacts{% endblock %}
+
+{% block content %}
+{% if mode == 'list' %}
+    <div class="page-header">
+        <div>
+            <h1>Contacts</h1>
+            <p class="subtitle">Recruiters, hiring managers, and people in your network.</p>
+        </div>
+        <a href="{{ url_for('contact_add') }}" class="btn btn-primary">+ Add Contact</a>
+    </div>
+
+    <div class="card table-card">
+        {% if contacts %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Title</th>
+                    <th>Company</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ct in contacts %}
+                <tr>
+                    <td><a href="{{ url_for('contact_detail', contact_id=ct.contact_id) }}" class="row-title">{{ ct.contact_name }}</a></td>
+                    <td>{{ ct.title or '—' }}</td>
+                    <td>{{ ct.company_name or '—' }}</td>
+                    <td>{% if ct.email %}<a href="mailto:{{ ct.email }}">{{ ct.email }}</a>{% else %}—{% endif %}</td>
+                    <td class="nowrap">{{ ct.phone or '—' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('contact_detail', contact_id=ct.contact_id) }}" class="btn btn-sm btn-light">View</a>
+                        <a href="{{ url_for('contact_edit', contact_id=ct.contact_id) }}" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="{{ url_for('contact_delete', contact_id=ct.contact_id) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="empty">No contacts yet. <a href="{{ url_for('contact_add') }}">Add one</a>.</p>
+        {% endif %}
+    </div>
+
+{% elif mode == 'detail' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('contacts') }}" class="back-link">&larr; All contacts</a>
+            <h1>{{ contact.contact_name }}</h1>
+            <p class="subtitle">
+                {{ contact.title or 'No title' }}
+                {% if contact.company_id %} at <a href="{{ url_for('company_detail', company_id=contact.company_id) }}">{{ contact.company_name }}</a>{% endif %}
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('contact_edit', contact_id=contact.contact_id) }}" class="btn btn-outline">Edit</a>
+            <a href="{{ url_for('contact_delete', contact_id=contact.contact_id) }}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <dl class="details">
+            <div><dt>Email</dt><dd>{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</dd></div>
+            <div><dt>Phone</dt><dd>{{ contact.phone or '—' }}</dd></div>
+            <div><dt>LinkedIn</dt><dd>{% if contact.linkedin_url %}<a href="{{ contact.linkedin_url }}" target="_blank" rel="noopener">View profile &nearr;</a>{% else %}—{% endif %}</dd></div>
+            <div class="full"><dt>Notes</dt><dd>{{ contact.notes or '—' }}</dd></div>
+        </dl>
+    </div>
+
+{% elif mode == 'form' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('contacts') }}" class="back-link">&larr; All contacts</a>
+            <h1>{{ 'Edit Contact' if editing else 'Add Contact' }}</h1>
+        </div>
+    </div>
+
+    {% if not companies %}
+        <div class="flash flash-error">You need to <a href="{{ url_for('company_add') }}">add a company</a> before adding contacts.</div>
+    {% endif %}
+
+    <form method="post" class="card form" novalidate>
+        <div class="form-grid">
+            <label>Name <span class="req">*</span>
+                <input type="text" name="contact_name" maxlength="100" required value="{{ item.get('contact_name', '') }}">
+            </label>
+            <label>Company <span class="req">*</span>
+                <select name="company_id" required>
+                    <option value="">— Select a company —</option>
+                    {% for c in companies %}
+                        <option value="{{ c.company_id }}" {{ 'selected' if item.get('company_id')|string == c.company_id|string }}>{{ c.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Title
+                <input type="text" name="title" maxlength="100" placeholder="e.g. Technical Recruiter" value="{{ item.get('title', '') }}">
+            </label>
+            <label>Email
+                <input type="email" name="email" maxlength="100" value="{{ item.get('email', '') }}">
+            </label>
+            <label>Phone
+                <input type="tel" name="phone" maxlength="20" value="{{ item.get('phone', '') }}">
+            </label>
+            <label>LinkedIn URL
+                <input type="url" name="linkedin_url" maxlength="200" placeholder="https://www.linkedin.com/in/..." value="{{ item.get('linkedin_url', '') }}">
+            </label>
+            <label class="full">Notes
+                <textarea name="notes" rows="4">{{ item.get('notes', '') }}</textarea>
+            </label>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('contact_detail', contact_id=record_id) if editing else url_for('contacts') }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing else 'Add Contact' }}</button>
+        </div>
+    </form>
+{% elif mode == 'delete' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('contact_detail', contact_id=contact.contact_id) }}" class="back-link">&larr; Back to contact</a>
+            <h1>Delete Contact</h1>
+        </div>
+    </div>
+
+    <div class="card confirm-card">
+        <h2>Are you sure you want to delete &ldquo;{{ contact.contact_name }}&rdquo;{% if contact.company_name %} ({{ contact.company_name }}){% endif %}?</h2>
+        <p class="confirm-warning">This cannot be undone.</p>
+        <form method="post" class="confirm-actions">
+            <a href="{{ url_for('contact_detail', contact_id=contact.contact_id) }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-danger-solid">Yes, delete contact</button>
+        </form>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Jobs{% endblock %}
+
+{% macro salary(j) -%}
+    {%- if j.salary_min and j.salary_max -%}${{ '{:,}'.format(j.salary_min) }} – ${{ '{:,}'.format(j.salary_max) }}
+    {%- elif j.salary_min -%}From ${{ '{:,}'.format(j.salary_min) }}
+    {%- elif j.salary_max -%}Up to ${{ '{:,}'.format(j.salary_max) }}
+    {%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+{% if mode == 'list' %}
+    <div class="page-header">
+        <div>
+            <h1>Jobs</h1>
+            <p class="subtitle">Job postings you are tracking.</p>
+        </div>
+        <a href="{{ url_for('job_add') }}" class="btn btn-primary">+ Add Job</a>
+    </div>
+
+    <div class="card table-card">
+        {% if jobs %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Type</th>
+                    <th>Salary</th>
+                    <th>Skills</th>
+                    <th>Posted</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for j in jobs %}
+                <tr>
+                    <td><a href="{{ url_for('job_detail', job_id=j.job_id) }}" class="row-title">{{ j.job_title }}</a></td>
+                    <td>{{ j.company_name or '—' }}</td>
+                    <td>{% if j.job_type %}<span class="badge badge-blue">{{ j.job_type }}</span>{% else %}—{% endif %}</td>
+                    <td class="nowrap">{{ salary(j) }}</td>
+                    <td><div class="chips">{% for s in j.requirements %}<span class="chip">{{ s }}</span>{% endfor %}</div></td>
+                    <td class="nowrap">{{ j.date_posted.strftime('%b %d, %Y') if j.date_posted else '—' }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('job_detail', job_id=j.job_id) }}" class="btn btn-sm btn-light">View</a>
+                        <a href="{{ url_for('job_edit', job_id=j.job_id) }}" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="{{ url_for('job_delete', job_id=j.job_id) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="empty">No jobs yet. <a href="{{ url_for('job_add') }}">Add one</a>.</p>
+        {% endif %}
+    </div>
+
+{% elif mode == 'detail' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('jobs') }}" class="back-link">&larr; All jobs</a>
+            <h1>{{ job.job_title }}</h1>
+            <p class="subtitle">
+                {% if job.company_id %}<a href="{{ url_for('company_detail', company_id=job.company_id) }}">{{ job.company_name }}</a>{% endif %}
+                {% if job.job_type %} &middot; {{ job.job_type }}{% endif %}
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('application_add', job_id=job.job_id) }}" class="btn btn-gold">Apply / Track</a>
+            <a href="{{ url_for('job_edit', job_id=job.job_id) }}" class="btn btn-outline">Edit</a>
+            <a href="{{ url_for('job_delete', job_id=job.job_id) }}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <dl class="details">
+            <div><dt>Salary</dt><dd>{{ salary(job) }}</dd></div>
+            <div><dt>Date Posted</dt><dd>{{ job.date_posted.strftime('%B %d, %Y') if job.date_posted else '—' }}</dd></div>
+            <div><dt>Job URL</dt><dd>{% if job.job_url %}<a href="{{ job.job_url }}" target="_blank" rel="noopener">Open posting &nearr;</a>{% else %}—{% endif %}</dd></div>
+            <div class="full"><dt>Required Skills</dt>
+                <dd>{% if job.requirements %}<div class="chips">{% for s in job.requirements %}<span class="chip">{{ s }}</span>{% endfor %}</div>{% else %}—{% endif %}</dd>
+            </div>
+        </dl>
+    </div>
+
+    <section class="card">
+        <h2>Applications for this job ({{ applications|length }})</h2>
+        {% if applications %}
+            <ul class="recent-list">
+                {% for a in applications %}
+                <li>
+                    <a href="{{ url_for('application_detail', application_id=a.application_id) }}">
+                        <strong>Applied {{ a.application_date.strftime('%b %d, %Y') }}</strong>
+                        <span class="muted">Resume {{ a.resume_version or '—' }}</span>
+                    </a>
+                    <span class="badge status-{{ a.status|lower }}">{{ a.status }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}<p class="empty">You haven't applied to this job yet.</p>{% endif %}
+    </section>
+
+{% elif mode == 'form' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('jobs') }}" class="back-link">&larr; All jobs</a>
+            <h1>{{ 'Edit Job' if editing else 'Add Job' }}</h1>
+        </div>
+    </div>
+
+    {% if not companies %}
+        <div class="flash flash-error">You need to <a href="{{ url_for('company_add') }}">add a company</a> before adding jobs.</div>
+    {% endif %}
+
+    <form method="post" class="card form" novalidate>
+        <div class="form-grid">
+            <label class="full">Job Title <span class="req">*</span>
+                <input type="text" name="job_title" maxlength="100" required value="{{ item.get('job_title', '') }}">
+            </label>
+            <label>Company <span class="req">*</span>
+                <select name="company_id" required>
+                    <option value="">— Select a company —</option>
+                    {% for c in companies %}
+                        <option value="{{ c.company_id }}" {{ 'selected' if item.get('company_id')|string == c.company_id|string }}>{{ c.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Job Type
+                <select name="job_type">
+                    <option value="">— Select —</option>
+                    {% for t in job_types %}
+                        <option value="{{ t }}" {{ 'selected' if item.get('job_type') == t }}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Minimum Salary ($)
+                <input type="number" name="salary_min" min="0" step="1000" value="{{ item.get('salary_min', '') }}">
+            </label>
+            <label>Maximum Salary ($)
+                <input type="number" name="salary_max" min="0" step="1000" value="{{ item.get('salary_max', '') }}">
+            </label>
+            <label>Job URL
+                <input type="url" name="job_url" maxlength="300" placeholder="https://" value="{{ item.get('job_url', '') }}">
+            </label>
+            <label>Date Posted
+                <input type="date" name="date_posted" value="{{ item.get('date_posted', '') }}">
+            </label>
+            <label class="full">Required Skills
+                <input type="text" name="requirements" placeholder="e.g. Python, SQL, Flask" value="{{ item.get('requirements', '') }}">
+                <span class="hint">Separate skills with commas. Stored as a JSON list and used by Job Match.</span>
+            </label>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('job_detail', job_id=record_id) if editing else url_for('jobs') }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing else 'Add Job' }}</button>
+        </div>
+    </form>
+{% elif mode == 'delete' %}
+    <div class="page-header">
+        <div>
+            <a href="{{ url_for('job_detail', job_id=job.job_id) }}" class="back-link">&larr; Back to job</a>
+            <h1>Delete Job</h1>
+        </div>
+    </div>
+
+    <div class="card confirm-card">
+        <h2>Are you sure you want to delete &ldquo;{{ job.job_title }}&rdquo;{% if job.company_name %} at {{ job.company_name }}{% endif %}?</h2>
+        <p class="confirm-warning">This will also permanently delete its {{ applications|length }} application(s). This cannot be undone.</p>
+        <form method="post" class="confirm-actions">
+            <a href="{{ url_for('job_detail', job_id=job.job_id) }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-danger-solid">Yes, delete job</button>
+        </form>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Job Match{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Job Match</h1>
+        <p class="subtitle">Enter your skills to see your saved jobs ranked by how well you match.</p>
+    </div>
+</div>
+
+<form method="post" class="card form match-form">
+    <label>Your Skills
+        <input type="text" name="skills" placeholder="e.g. Python, SQL, Flask" value="{{ skills_text }}" autofocus>
+        <span class="hint">Separate skills with commas. Matching is not case-sensitive.</span>
+    </label>
+    <button type="submit" class="btn btn-gold">Find Matches</button>
+    {% if all_skills %}
+        <div class="known-skills">
+            <span class="muted small">Skills found in your saved jobs:</span>
+            <div class="chips">{% for s in all_skills %}<span class="chip chip-light">{{ s }}</span>{% endfor %}</div>
+        </div>
+    {% endif %}
+</form>
+
+{% if results is not none %}
+    <section>
+        <p class="your-skills"><strong>Your Skills:</strong> {{ user_skills|join(', ') }}</p>
+        <h2 class="results-title">Matching Jobs</h2>
+
+        {% if results %}
+            <ol class="match-list">
+                {% for r in results %}
+                <li class="card match-card">
+                    <div class="match-rank">{{ loop.index }}</div>
+                    <div class="match-body">
+                        <div class="match-head">
+                            <div>
+                                <a href="{{ url_for('job_detail', job_id=r.job.job_id) }}" class="match-title">{{ r.job.job_title }}</a>
+                                <span class="muted">at {{ r.job.company_name }}</span>
+                            </div>
+                            <div class="match-percent {{ 'perfect' if r.percent == 100 }}">
+                                {{ r.percent }}%
+                                <span class="muted small">({{ r.matched|length }}/{{ r.total }} skills)</span>
+                            </div>
+                        </div>
+                        <div class="bar bar-lg"><span class="bar-fill {{ 'bar-gold' if r.percent == 100 }}" style="width: {{ r.percent }}%"></span></div>
+                        <div class="match-skills">
+                            <div><span class="label">Matched:</span>
+                                <div class="chips">{% for s in r.matched %}<span class="chip">{{ s }}</span>{% endfor %}</div>
+                            </div>
+                            {% if r.missing %}
+                            <div><span class="label">Missing:</span>
+                                <div class="chips">{% for s in r.missing %}<span class="chip chip-gold">{{ s }}</span>{% endfor %}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <div class="card"><p class="empty">None of your saved jobs require these skills. Try adding more skills.</p></div>
+        {% endif %}
+    </section>
+{% endif %}
+{% endblock %}

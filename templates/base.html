@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Tracker{% endblock %} | Job Application Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% set section = (request.endpoint or '').split('_')[0] %}
+    <header class="navbar">
+        <div class="nav-inner">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <span class="brand-mark">JT</span>
+                <span>Job<strong>Tracker</strong></span>
+            </a>
+            <nav class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="{{ 'active' if section == 'dashboard' }}">Dashboard</a>
+                <a href="{{ url_for('companies') }}" class="{{ 'active' if section in ['companies', 'company'] }}">Companies</a>
+                <a href="{{ url_for('jobs') }}" class="{{ 'active' if section in ['jobs', 'job'] and request.endpoint != 'job_match' }}">Jobs</a>
+                <a href="{{ url_for('applications') }}" class="{{ 'active' if section in ['applications', 'application'] }}">Applications</a>
+                <a href="{{ url_for('contacts') }}" class="{{ 'active' if section in ['contacts', 'contact'] }}">Contacts</a>
+                <a href="{{ url_for('job_match') }}" class="nav-cta {{ 'active' if request.endpoint == 'job_match' }}">Job Match</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        Job Application Tracker &middot; Flask + MySQL
+    </footer>
+</body>
+</html>
