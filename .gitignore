@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ----- Job Application Tracker -----
+config.py
+instructions/
